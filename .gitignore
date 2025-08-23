@@ -1,11 +1,11 @@
 __pycache__/
+.vscode/
 *.pyc
 *.pyo
 .env
 .venv/
 venv/
 env/
-__pycache__
 config.py
 credentials.json
 *.log
