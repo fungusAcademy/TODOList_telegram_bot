@@ -1,0 +1,20 @@
+# Python-specific ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.log
+pip-selfcheck.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+.git/
+.gitignore
+*.egg-info/
+*.so
