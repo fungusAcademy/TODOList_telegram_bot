@@ -10,3 +10,5 @@ config.py
 credentials.json
 *.log
 .DS_Store
+sql_пароль.txt
+setup_db.sql
