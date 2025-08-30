@@ -12,3 +12,5 @@ credentials.json
 .DS_Store
 sql_пароль.txt
 setup_db.sql
+.coverage
+htmlcov
