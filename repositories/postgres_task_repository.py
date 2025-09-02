@@ -25,3 +25,10 @@ class PostgresTaskRepository(ITaskRepository):
             return task_id
         
     # Add: Delete function
+    async def delete_task(self, user_id: int, task_id: int) -> bool:
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(
+            "DELETE FROM tasks WHERE id = $1 AND user_id = $2",
+            task_id, user_id
+            )
+        return result.split()[-1] == '1'

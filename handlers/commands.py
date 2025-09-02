@@ -100,18 +100,34 @@ async def list_tasks(
         await message.answer("❌ Ошибка при получении задач из базы")
         print(f"Ошибка: {e}")
 
-# @router.message(Command('del'))
-# # @router.message(lambda message: message.text == "Очистить список задач")
-# async def del_tasks(message: types.Message, task_service: TaskService):
-#     # Добавить обработку ввода, если ввели не число или неверное число
-#     if message.text is not None:
-#         try:
-#             id = int(message.text.replace('/del', '').strip())
-#         except:
-#             await message.answer("Пожалуйста, введите номер заметки, которую нужно удалить!")
-#             return
-#         await task_service.delete_task(id)
-#         await message.answer(f"Задача №{id} успешно удалена!")
+@router.message(Command('del'))
+@inject
+async def delete_task(
+    message: types.Message,
+    task_service: TaskService = Provide['task_service']
+):
+    if message.from_user is not None:
+        user_id = message.from_user.id
+    else:
+        raise TypeError('user id is None')
+    
+    if message.text is None:
+        raise TypeError('Task id is None')
+    
+    try:
+        task_id = int(message.text.replace('/del', '').strip())
+        result = await task_service.delete_task(user_id, task_id)
+    except ValueError:
+        await message.answer(f"❌ Введите номер задачи для удаления!")
+        return
+    except:
+        print("Ошибка task_service.delete_task(user_id, task_id)")
+        return
+    
+    if result:
+        await message.answer(f"✅ Задача #{task_id} удалена из базы")
+    else:
+        await message.answer(f"❌ Задача {task_id} отсутствует в базе")
 
 # # Обработка ввода задачи
 # @router.message(lambda message: message.text and message.text not in ["Добавить задачу", "Список задач", "Очистить список задач", "Помощь"])

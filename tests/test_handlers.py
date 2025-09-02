@@ -1,4 +1,3 @@
-# tests/test_handlers.py
 import pytest
 from unittest.mock import AsyncMock, patch
 from handlers.commands import add_task, list_tasks
@@ -6,7 +5,7 @@ from handlers.commands import add_task, list_tasks
 @pytest.mark.asyncio
 async def test_add_task_handler_success(mock_message):
     """Тест успешного добавления задачи"""
-    with patch('handlers.commands.add_task_to_db') as mock_add:
+    with patch('handlers.commands.add_task') as mock_add:
         mock_add.return_value = 1
         
         await add_task(mock_message)
@@ -36,7 +35,7 @@ async def test_list_tasks_handler_empty():
     message = AsyncMock()
     message.from_user.id = 12345
     
-    with patch('handlers.commands.get_user_tasks_from_db') as mock_get:
+    with patch('handlers.commands.list_tasks') as mock_get:
         mock_get.return_value = []
         
         await list_tasks(message)

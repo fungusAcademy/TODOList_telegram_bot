@@ -12,9 +12,8 @@ class TaskService:
         return await self.task_repository.create_task(user_id, text)
     
     async def get_user_tasks(self, user_id: int) -> list[Task]:
-        return await self.task_repository.get_user_tasks(user_id)    
-    
-    # WIP
-    # async def delete_task(self, id: int) -> None:
-    #     await self.task_repository.delete_task(id)
+        return await self.task_repository.get_user_tasks(user_id)   
+
+    async def delete_task(self, user_id: int, task_id: int) -> bool:
+        return await self.task_repository.delete_task(user_id, task_id)
     

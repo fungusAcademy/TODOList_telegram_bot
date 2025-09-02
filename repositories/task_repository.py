@@ -11,10 +11,9 @@ class ITaskRepository(ABC):
     async def get_user_tasks(self, user_id: int) -> List[Task]:
         pass
     
-    #  WIP
-    # @abstractmethod
-    # async def delete_task(self, task_id: int) -> None:
-    #     pass
+    @abstractmethod
+    async def delete_task(self, user_id: int, task_id: int) -> bool:
+        pass
 
 # class InMemoryTaskRepository(ITaskRepository):
 #     def __init__(self):
