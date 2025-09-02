@@ -3,11 +3,12 @@ from datetime import datetime
 
 @dataclass
 class Task:
-    id: int
-    text: str
-    user_id: int = 1
-    created_at: datetime = datetime.now()
+    id: int | None = None
+    user_id: int | None = None
+    task_text: str | None = None
+    created_at: datetime | None = datetime.now()
     is_done: bool = False
 
-    def __str__(self):
-        return f"{self.id}: {self.text}"
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
