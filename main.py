@@ -17,8 +17,6 @@ async def main():
 
     # Dependency injection
     container.wire(modules=["handlers.commands"])
-    # container.wire(modules=[handlers.commands])
-
 
     # router connect
     dp.include_router(router)

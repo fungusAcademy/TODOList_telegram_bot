@@ -7,19 +7,21 @@ import asyncpg
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
     
-    # DB conncection pool
-    db_pool = providers.Resource(
-        asyncpg.create_pool,
-        dsn=config.database.dsn,
-        min_size=5,
-        max_size=10,
-        timeout=30
-    )
+    # DB conncection pool is now handled in database.pool
+
+    # db_pool = providers.Resource(
+    #     asyncpg.create_pool,
+    #     dsn=config.database.dsn,
+    #     min_size=5,
+    #     max_size=10,
+    #     timeout=30
+    # )
     
     # Repository
+    # No need to pass pool to provider now
     task_repository = providers.Factory(
-        PostgresTaskRepository,
-        pool=db_pool
+        PostgresTaskRepository
+        # pool=db_pool
     )
     
     # Service
