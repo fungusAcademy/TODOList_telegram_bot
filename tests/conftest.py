@@ -1,9 +1,10 @@
 import pytest
 import pytest_asyncio
 import asyncpg
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 import os
 from dotenv import load_dotenv
+from services.task_service import TaskService
 
 load_dotenv()
 
@@ -97,10 +98,17 @@ async def test_database_isolation(test_db):
         pass
 
 @pytest.fixture
+def mock_task_service():
+    """Mock task_service fixture"""
+    mock_service = AsyncMock(spec=TaskService)
+    mock_service.create_task.return_value = 1
+    return mock_service
+    
+@pytest.fixture
 def mock_message():
-    """Фикстура для mock сообщения"""
+    """ Mock message fixture.
+    No need to set message text as it is being set in test functions directly"""
     message = AsyncMock()
     message.from_user.id = 12345
-    message.text = "/add Test task"
+    message.answer = AsyncMock()
     return message
-    

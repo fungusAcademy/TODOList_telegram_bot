@@ -3,7 +3,6 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from services.task_service import TaskService
 from dependency_injector.wiring import Provide, inject
-# from db_operations import add_task_to_db, get_user_tasks_from_db
 
 router = Router()
 
@@ -38,12 +37,14 @@ keyboard = ReplyKeyboardMarkup(
 
 @router.message(Command('start'))
 async def cmd_start(message: types.Message):
+    """/start command handler"""
     # await message.answer(WELCOME_TEXT, reply_markup=keyboard)
     await message.answer(WELCOME_TEXT)
 
 @router.message(Command('help'))
 @router.message(lambda message: message.text == "Помощь")
 async def cmd_help(message: types.Message):
+    """/help command handler"""
     await message.answer(HELP_TEXT)
 
 @router.message(Command('add'))
@@ -53,6 +54,34 @@ async def add_task(
     message: types.Message,
     task_service: TaskService = Provide['task_service']
     ):
+    """/add command handler"""
+    if message.from_user is not None:
+        user_id = message.from_user.id
+    else:
+        raise TypeError('user id is None')
+    
+    if message.text is not None:
+        task_text = message.text.replace('/add', '').strip()
+    else:
+        raise TypeError('task text is None')
+        
+    if not task_text:
+        await message.answer("❌ Введите задачу после команды /add")
+        return
+
+    try:
+        task_id = await task_service.create_task(user_id, task_text)
+        await message.answer(f"✅ Задача #{task_id} добавлена в базу: {task_text}")
+    except Exception as e:
+        await message.answer("❌ Ошибка при добавлении в базу")
+        print(f"Ошибка: {e}")
+
+async def add_task_for_test(
+    message: types.Message,
+    task_service: TaskService
+):
+    """FOR TESTS without DI
+    /add command handler """
     if message.from_user is not None:
         user_id = message.from_user.id
     else:
@@ -82,6 +111,32 @@ async def list_tasks(
     message: types.Message,
     task_service: TaskService = Provide['task_service']
     ):
+    """/list command handler"""
+    if message.from_user is not None:
+        user_id = message.from_user.id
+    else:
+        raise TypeError('user id is None')
+    
+    try:
+        tasks = await task_service.get_user_tasks(user_id)
+        
+        if not tasks:
+            await message.answer("📭 В базе нет задач")
+            return
+        
+        tasks_list = "\n".join([f"• {task.task_text} (ID: {task.id})" for task in tasks])
+        await message.answer(f"📋 Задачи из базы данных:\n{tasks_list}")
+    except Exception as e:
+        await message.answer("❌ Ошибка при получении задач из базы")
+        print(f"Ошибка: {e}")
+
+
+async def list_tasks_for_test(
+    message: types.Message,
+    task_service: TaskService
+):
+    """FOR TESTS without DI
+    /list command handler """
     if message.from_user is not None:
         user_id = message.from_user.id
     else:
@@ -117,17 +172,44 @@ async def delete_task(
     try:
         task_id = int(message.text.replace('/del', '').strip())
         result = await task_service.delete_task(user_id, task_id)
+
+        if result:
+            await message.answer(f"✅ Задача #{task_id} удалена из базы")
+        else:
+            await message.answer(f"❌ Задача #{task_id} отсутствует в базе")
     except ValueError:
         await message.answer(f"❌ Введите номер задачи для удаления!")
         return
-    except:
-        print("Ошибка task_service.delete_task(user_id, task_id)")
-        return
-    
-    if result:
-        await message.answer(f"✅ Задача #{task_id} удалена из базы")
+    except Exception as e:
+        await message.answer("❌ Ошибка при получении задач из базы")
+        print(f"Ошибка: {e}")
+
+async def delete_task_for_test(
+    message: types.Message,
+    task_service: TaskService
+):
+    if message.from_user is not None:
+        user_id = message.from_user.id
     else:
-        await message.answer(f"❌ Задача {task_id} отсутствует в базе")
+        raise TypeError('user id is None')
+    
+    if message.text is None:
+        raise TypeError('Task id is None')
+    
+    try:
+        task_id = int(message.text.replace('/del', '').strip())
+        result = await task_service.delete_task(user_id, task_id)
+
+        if result:
+            await message.answer(f"✅ Задача #{task_id} удалена из базы")
+        else:
+            await message.answer(f"❌ Задача #{task_id} отсутствует в базе")
+    except ValueError:
+        await message.answer(f"❌ Введите номер задачи для удаления!")
+        return
+    except Exception as e:
+        await message.answer("❌ Ошибка при получении задач из базы")
+        print(f"Ошибка: {e}")
 
 # # Обработка ввода задачи
 # @router.message(lambda message: message.text and message.text not in ["Добавить задачу", "Список задач", "Очистить список задач", "Помощь"])
