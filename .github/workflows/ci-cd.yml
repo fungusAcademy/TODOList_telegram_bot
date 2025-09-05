@@ -14,9 +14,9 @@ jobs:
       postgres:
         image: postgres:13
         env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
+            POSTGRES_USER: test_user
+            POSTGRES_PASSWORD: test_password
+            POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -39,9 +39,24 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio
 
+    - name: Wait for PostgreSQL
+      run: |
+        for i in {1..10}; do
+          if pg_isready -h localhost -p 5432 -U test_user; then
+            echo "PostgreSQL is ready!"
+            exit 0
+          fi
+          echo "Waiting for PostgreSQL... Attempt $i"
+          sleep 2
+        done
+        exit 1
+
     - name: Run tests
       env:
-        DATABASE_DSN: postgresql://test_user:test_password@localhost:5432/test_db
+        POSTGRES_USER: test_user
+        POSTGRES_PASSWORD: test_password
+        POSTGRES_DB: test_db
+        DB_HOST: localhost
       run: |
         pytest -v --cov=src --cov-report=xml
 

@@ -12,32 +12,20 @@ load_dotenv()
 # нужно создать другую БД для тестов
 @pytest_asyncio.fixture
 async def test_db():
-    """Фикстура для тестовой базы данных"""
-    # Создаем отдельную тестовую базу
-    test_db_name = "test_telegram_bot"
+    """Универсальная фикстура для тестовой базы данных"""
     
-    # Подключаемся к основной базе чтобы создать тестовую
-    conn = await asyncpg.connect(
-        database=os.getenv('MAIN_DB_NAME'),
-        user=os.getenv('MAIN_DB_USER'),
-        password=os.getenv('MAIN_DB_PASSWORD'),
-        host=os.getenv('DB_HOST')
-    )
+    db_name = os.getenv('POSTGRES_DB', os.getenv('MAIN_DB_NAME'))
+    db_user = os.getenv('POSTGRES_USER', os.getenv('MAIN_DB_USER'))
+    db_password = os.getenv('POSTGRES_PASSWORD', os.getenv('MAIN_DB_PASSWORD'))
+    db_host = os.getenv('DB_HOST', 'localhost')
     
-    await conn.execute(f"DROP DATABASE IF EXISTS {test_db_name}")
-    await conn.execute(f"CREATE DATABASE {test_db_name}")
-    await conn.close()
+     # Подключаемся к БД
+    dsn = f"postgresql://{db_user}:{db_password}@{db_host}:5432/{db_name}"
+    conn = await asyncpg.connect(dsn=dsn)
     
-    # Подключаемся к тестовой базе
-    test_conn = await asyncpg.connect(
-        database=test_db_name,
-        user=os.getenv('MAIN_DB_USER'),
-        password=os.getenv('MAIN_DB_PASSWORD'),
-        host=os.getenv('DB_HOST')
-    )
-    
-    # Создаем таблицы
-    await test_conn.execute('''
+    # Создаем таблицы для тестов
+    await conn.execute('''
+        DROP TABLE IF EXISTS tasks;
         CREATE TABLE tasks (
             id SERIAL PRIMARY KEY,
             user_id BIGINT NOT NULL,
@@ -46,20 +34,11 @@ async def test_db():
         )
     ''')
     
-    yield test_conn
+    yield conn
     
-    # Очистка после тестов
-    await test_conn.close()
-    
-    # Удаляем тестовую базу
-    clean_conn = await asyncpg.connect(
-        database=os.getenv('MAIN_DB_NAME'),
-        user=os.getenv('MAIN_DB_USER'),
-        password=os.getenv('MAIN_DB_PASSWORD'),
-        host=os.getenv('DB_HOST')
-    )
-    await clean_conn.execute(f"DROP DATABASE {test_db_name}")
-    await clean_conn.close()
+    # Очищаем и закрываем соединение
+    await conn.execute('DROP TABLE IF EXISTS tasks')
+    await conn.close()
 
 @pytest.mark.asyncio
 async def test_database_isolation(test_db):
