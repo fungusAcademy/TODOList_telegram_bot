@@ -15,3 +15,5 @@ setup_db.sql
 .coverage
 htmlcov
 .pytest_cache/
+project_structure.md
+.ssh
