@@ -1,0 +1,101 @@
+# .github/workflows/deploy.yml
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  # workflow_dispatch:  # Ручной запуск
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # stating github environment for github actions
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install SSH Key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_KEY }}
+        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+
+    - name: Deploy via RSYNC
+      run: |
+        rsync -avz --delete \
+          --exclude='venv/' \
+          --exclude='.git/' \
+          --exclude='__pycache__/' \
+          --exclude='.github/' \
+          -e "ssh -o StrictHostKeyChecking=no" \
+          ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies and restart bot
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        # We use secrat variables unique to production environment
+        # to connect to host through ssh
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd ~/telegram_bot
+
+          # Create virtual environment if not exists
+          if [ ! -d "venv" ]; then
+            python -m venv venv
+          fi
+
+          # Activate venv and install dependencies
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          # Apply database migrations
+          alembic upgrade head
+
+          # Restart the bot process
+          if [ -f bot.pid ]; then
+            kill $(cat bot.pid) 2>/dev/null || true
+            sleep 2
+          fi
+
+          # Start the bot and save PID
+          nohup python main.py > bot.log 2>&1 &
+          echo $! > bot.pid
+          
+          echo "Deployment completed successfully!"
+
+    - name: Run tests
+      run: pytest -v
+
+    # - name: Send Telegram notification
+    #   if: success()
+    #   uses: appleboy/telegram-action@v1.0.0
+    #   with:
+    #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
+    #     token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    #     message: |
+    #       ✅ Deployment Successful!
+    #       Branch: ${{ github.ref }}
+    #       Commit: ${{ github.sha }}
+    #       By: ${{ github.actor }}
+
+    # - name: Send failure notification
+    #   if: failure()
+    #   uses: appleboy/telegram-action@v1.0.0
+    #   with:
+    #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
+    #     token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    #     message: |
+    #       ❌ Deployment Failed!
+    #       Branch: ${{ github.ref }}
+    #       Commit: ${{ github.sha }}
+    #       By: ${{ github.actor }}
