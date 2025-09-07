@@ -6,7 +6,6 @@ __pycache__/
 .venv/
 venv/
 env/
-config.py
 credentials.json
 *.log
 .DS_Store
