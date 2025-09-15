@@ -16,3 +16,5 @@ htmlcov
 .pytest_cache/
 project_structure.md
 .ssh
+.secrets
+migrations/authorized_keys

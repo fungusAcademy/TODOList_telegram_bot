@@ -9,28 +9,78 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     # stating github environment for github actions
-    environment: production
+    # environment: production
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    # - name: Add SSH Key
+    #   uses: webfactory/ssh-agent@v0.8.0
+    #   with:
+    #     ssh-private-key: ${{ secrets.SSH_KEY }}
 
-    - name: Install SSH Key
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.SSH_KEY }}
-        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        
+        # Явно добавляем хост с указанием типа ключа
+        ssh-keyscan -t rsa,ecdsa,ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        cat ~/.ssh/known_hosts
+
+    - name: Debug SSH connection
+      run: |
+        timeout 60s ssh -vvv -i ~/.ssh/deploy_key \
+          -o BatchMode=yes \
+          -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+          echo "Connection successful" 2>&1 | tee ssh_debug.log
+        echo "Exit code: $?"
+        
+    # - name: Test SSH connection
+    #   run: |
+    #     timeout 30s ssh -v -p 22 -o StrictHostKeyChecking=no \
+    #       -i ~/.ssh/deploy_key \
+    #       ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+    #       echo "Connection successful"
+
+    - name: Install rsync and sshpass
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y rsync sshpass
+
+
+    # - name: Test SSH with password
+    #   run: |
+    #     timeout 30s sshpass -v -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no \
+    #       ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+    #       echo "Connection successful"
 
     - name: Deploy via RSYNC
       run: |
-        rsync -avz --delete \
+        rsync -avz --delete --progress \
           --exclude='venv/' \
           --exclude='.git/' \
           --exclude='__pycache__/' \
           --exclude='.github/' \
-          -e "ssh -o StrictHostKeyChecking=no" \
-          ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
+          -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ./ \
+          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
+
+    # - name: Deploy via SCP
+    #   run: |
+    #     scp -r -o StrictHostKeyChecking=no -i ${{ secrets.SSH_KEY }} \
+    #       --exclude venv \
+    #       --exclude .git \
+    #       --exclude __pycache__ \
+    #       --exclude .github \
+    #       ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -40,7 +90,7 @@ jobs:
     - name: Install dependencies and restart bot
       uses: appleboy/ssh-action@v1.0.0
       with:
-        # We use secrat variables unique to production environment
+        # We use secret variables unique to production environment
         # to connect to host through ssh
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
