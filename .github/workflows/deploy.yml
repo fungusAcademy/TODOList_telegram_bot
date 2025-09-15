@@ -4,127 +4,57 @@ name: Deploy to Production
 on:
   push:
     branches: [ main ]
-  # workflow_dispatch:  # Ручной запуск
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    # stating github environment for github actions
-    # environment: production
+    if: github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    # - name: Add SSH Key
-    #   uses: webfactory/ssh-agent@v0.8.0
-    #   with:
-    #     ssh-private-key: ${{ secrets.SSH_KEY }}
-
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
-        chmod 600 ~/.ssh/deploy_key
-        
-        # Явно добавляем хост с указанием типа ключа
-        ssh-keyscan -t rsa,ecdsa,ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-        cat ~/.ssh/known_hosts
-
-    - name: Debug SSH connection
-      run: |
-        timeout 60s ssh -vvv -i ~/.ssh/deploy_key \
-          -o BatchMode=yes \
-          -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-          echo "Connection successful" 2>&1 | tee ssh_debug.log
-        echo "Exit code: $?"
-        
-    # - name: Test SSH connection
-    #   run: |
-    #     timeout 30s ssh -v -p 22 -o StrictHostKeyChecking=no \
-    #       -i ~/.ssh/deploy_key \
-    #       ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-    #       echo "Connection successful"
-
-    - name: Install rsync and sshpass
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y rsync sshpass
-
-
-    # - name: Test SSH with password
-    #   run: |
-    #     timeout 30s sshpass -v -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no \
-    #       ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-    #       echo "Connection successful"
-
-    - name: Deploy via RSYNC
-      run: |
-        rsync -avz --delete --progress \
-          --exclude='venv/' \
-          --exclude='.git/' \
-          --exclude='__pycache__/' \
-          --exclude='.github/' \
-          -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-          ./ \
-          ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
-
-    # - name: Deploy via SCP
-    #   run: |
-    #     scp -r -o StrictHostKeyChecking=no -i ${{ secrets.SSH_KEY }} \
-    #       --exclude venv \
-    #       --exclude .git \
-    #       --exclude __pycache__ \
-    #       --exclude .github \
-    #       ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/fungusacademy/telegram_bot/
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
-    - name: Install dependencies and restart bot
+    - name: Install dependencies
       uses: appleboy/ssh-action@v1.0.0
       with:
-        # We use secret variables unique to production environment
-        # to connect to host through ssh
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
         script: |
-          cd ~/telegram_bot
-
-          # Create virtual environment if not exists
-          if [ ! -d "venv" ]; then
-            python -m venv venv
-          fi
-
-          # Activate venv and install dependencies
-          source venv/bin/activate
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install alembic psycopg2-binary
 
-          # Apply database migrations
-          alembic upgrade head
-
-          # Restart the bot process
-          if [ -f bot.pid ]; then
-            kill $(cat bot.pid) 2>/dev/null || true
-            sleep 2
-          fi
-
-          # Start the bot and save PID
-          nohup python main.py > bot.log 2>&1 &
-          echo $! > bot.pid
-          
-          echo "Deployment completed successfully!"
+    - name: Run migrations on production
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        alembic upgrade head
 
     - name: Run tests
       run: pytest -v
+
+    - name: Restart Bot
+      run: |
+        # Restart the bot process
+        if [ -f bot.pid ]; then
+          kill $(cat bot.pid) 2>/dev/null || true
+          sleep 2
+        fi
+
+        # Start the bot and save PID
+        nohup python main.py > bot.log 2>&1 &
+        echo $! > bot.pid
+        
+        echo "Deployment completed successfully!"
+
+    - name: Trigger Render deployment
+      run: |
+        # Для автоматического деплоя на Render при пуше в main
+        # Render автоматически обнаружит push и запустит деплой
+        echo "Deployment triggered by push to main branch"
 
     # - name: Send Telegram notification
     #   if: success()

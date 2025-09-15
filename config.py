@@ -2,9 +2,12 @@ import os
 from dotenv import load_dotenv
 
 def get_database_url():
-    # AlwaysData предоставляет переменную DATABASE_URL
     if 'DATABASE_URL' in os.environ:
-        return os.environ['DATABASE_URL']
+        db_url = os.environ['DATABASE_URL']
+        # Некоторые библиотеки требуют замену postgresql:// на postgres://
+        if db_url.startswith('postgresql://'):
+            db_url = db_url.replace('postgresql://', 'postgres://', 1)
+        return db_url
     if "DATABASE_DSN" in os.environ:
         return os.environ['DATABASE_DSN']
     
