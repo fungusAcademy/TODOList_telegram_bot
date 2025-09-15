@@ -1,15 +1,18 @@
 # .github/workflows/deploy.yml
-name: Deploy to Production
+name: CD Pipeline - Deploy to Render
 
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [main]
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -30,23 +33,6 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: |
         alembic upgrade head
-
-    - name: Run tests
-      run: pytest -v
-
-    - name: Restart Bot
-      run: |
-        # Restart the bot process
-        if [ -f bot.pid ]; then
-          kill $(cat bot.pid) 2>/dev/null || true
-          sleep 2
-        fi
-
-        # Start the bot and save PID
-        nohup python main.py > bot.log 2>&1 &
-        echo $! > bot.pid
-        
-        echo "Deployment completed successfully!"
 
     - name: Trigger Render deployment
       run: |
