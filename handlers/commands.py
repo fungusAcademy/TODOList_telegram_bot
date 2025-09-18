@@ -21,19 +21,18 @@ WELCOME_TEXT = """
 HELP_TEXT = """
 📋 Как пользоваться ботом:
 
-• Нажми "Добавить задачу" или напиши /add + текст задачи чтобы добавить новую задачу
-• Нажми "Список задач" или напиши /list чтобы посмотреть все задачи
-• Нажми "удалить" или напиши /del чтобы удалить все задачи
-• Задачи сохраняются в памяти (после перезапуска бота пропадут)
+• Напиши /add + текст задачи чтобы добавить новую задачу
+• Напиши /list чтобы посмотреть все задачи
+• Напиши /del чтобы удалить все задачи
     """
 
-keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Добавить задачу"), KeyboardButton(text="Список задач")], 
-        [KeyboardButton(text="Очистить список задач"), KeyboardButton(text="Помощь")]
-    ],
-    resize_keyboard=True
-)
+# keyboard = ReplyKeyboardMarkup(
+#     keyboard=[
+#         [KeyboardButton(text="Добавить задачу"), KeyboardButton(text="Список задач")], 
+#         [KeyboardButton(text="Очистить список задач"), KeyboardButton(text="Помощь")]
+#     ],
+#     resize_keyboard=True
+# )
 
 @router.message(Command('start'))
 async def cmd_start(message: types.Message):
@@ -106,7 +105,6 @@ async def add_task_for_test(
 @router.message(Command('list'))
 @inject
 # @router.message(lambda message: message.text == "Список задач")
-# Tasks now are printed in reverse order -_-
 async def list_tasks(
     message: types.Message,
     task_service: TaskService = Provide['task_service']
@@ -210,18 +208,3 @@ async def delete_task_for_test(
     except Exception as e:
         await message.answer("❌ Ошибка при получении задач из базы")
         print(f"Ошибка: {e}")
-
-# # Обработка ввода задачи
-# @router.message(lambda message: message.text and message.text not in ["Добавить задачу", "Список задач", "Очистить список задач", "Помощь"])
-# async def process_task_input(message: types.Message):
-#     if message.from_user is not None:
-#         user_id = message.from_user.id
-#     else:
-#         pass
-#     task_text = message.text
-    
-#     if user_id not in user_tasks:
-#         user_tasks[user_id] = []
-    
-#     user_tasks[user_id].append(task_text)
-#     await message.answer(f"✅ Задача добавлена: {task_text}")
