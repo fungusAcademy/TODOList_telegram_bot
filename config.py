@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 def get_database_url():
     if 'DATABASE_URL' in os.environ:
         db_url = os.environ['DATABASE_URL']
-        # Некоторые библиотеки требуют замену postgresql:// на postgres://
+        # some libs use postgres://
         if db_url.startswith('postgresql://'):
             db_url = db_url.replace('postgresql://', 'postgres://', 1)
         return db_url

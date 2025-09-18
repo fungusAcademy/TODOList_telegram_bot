@@ -2,17 +2,12 @@
 name: CD Pipeline - Deploy to Render
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
-    branches: [main]
+  push:
+    branches: [ main ]
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-latest 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -36,30 +31,4 @@ jobs:
 
     - name: Trigger Render deployment
       run: |
-        # Для автоматического деплоя на Render при пуше в main
-        # Render автоматически обнаружит push и запустит деплой
         echo "Deployment triggered by push to main branch"
-
-    # - name: Send Telegram notification
-    #   if: success()
-    #   uses: appleboy/telegram-action@v1.0.0
-    #   with:
-    #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
-    #     token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    #     message: |
-    #       ✅ Deployment Successful!
-    #       Branch: ${{ github.ref }}
-    #       Commit: ${{ github.sha }}
-    #       By: ${{ github.actor }}
-
-    # - name: Send failure notification
-    #   if: failure()
-    #   uses: appleboy/telegram-action@v1.0.0
-    #   with:
-    #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
-    #     token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    #     message: |
-    #       ❌ Deployment Failed!
-    #       Branch: ${{ github.ref }}
-    #       Commit: ${{ github.sha }}
-    #       By: ${{ github.actor }}

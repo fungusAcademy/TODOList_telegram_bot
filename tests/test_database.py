@@ -3,27 +3,27 @@ import asyncpg
 
 @pytest.mark.asyncio
 async def test_add_task_to_test_db(test_db):
-    """Простой тест записи в тестовую базу данных"""
+    """TEST adding task to DB"""
     
-    # 1. Проверяем, что база пустая в начале
+    # 1. check if DB is empty
     initial_tasks = await test_db.fetch("SELECT * FROM tasks")
     assert len(initial_tasks) == 0
     
-    # 2. Добавляем задачу напрямую в тестовую базу
+    # 2. add task directly to test DB
     task_id = await test_db.fetchval(
         'INSERT INTO tasks (user_id, task_text) VALUES ($1, $2) RETURNING id',
         123, "Test task from pytest"
     )
     
-    # 3. Проверяем, что задача добавилась
+    # 3. Check if task is added
     assert task_id is not None
     assert isinstance(task_id, int)
     
-    # 4. Проверяем, что данные действительно в базе
+    # 4. Check if data is in DB
     tasks = await test_db.fetch("SELECT * FROM tasks")
     assert len(tasks) == 1
     
-    # 5. Проверяем содержимое задачи
+    # 5. Check task content
     task = tasks[0]
     assert task['id'] == task_id
     assert task['user_id'] == 123
@@ -32,9 +32,8 @@ async def test_add_task_to_test_db(test_db):
 
 @pytest.mark.asyncio
 async def test_multiple_tasks(test_db):
-    """Тест добавления нескольких задач"""
+    """TEST adding several tasks"""
     
-    # Добавляем несколько задач
     tasks_data = [
         (111, "Первая задача"),
         (222, "Вторая задача"),
@@ -47,11 +46,11 @@ async def test_multiple_tasks(test_db):
             user_id, task_text
         )
     
-    # Проверяем общее количество задач
+    # check number of tasks
     all_tasks = await test_db.fetch("SELECT * FROM tasks ORDER BY id")
     assert len(all_tasks) == 3
     
-    # Проверяем задачи конкретного пользователя
+    # check tasks of specific user
     user_tasks = await test_db.fetch(
         "SELECT * FROM tasks WHERE user_id = $1 ORDER BY id",
         111
@@ -62,7 +61,7 @@ async def test_multiple_tasks(test_db):
 
 @pytest.mark.asyncio
 async def test_task_with_created_at(test_db):
-    """Тест что created_at автоматически заполняется"""
+    """TEST that created_at is assigned by default and is correct time"""
     
     task_id = await test_db.fetchval(
         'INSERT INTO tasks (user_id, task_text) VALUES ($1, $2) RETURNING id',
@@ -75,6 +74,6 @@ async def test_task_with_created_at(test_db):
     )
     
     assert task['created_at'] is not None
-    # Проверяем что created_at примерно сейчас (в пределах минуты)
+    # Check if created_at is approximately correct (1 minute diff)
     import datetime
     assert abs(datetime.datetime.now() - task['created_at']) < datetime.timedelta(minutes=1)
